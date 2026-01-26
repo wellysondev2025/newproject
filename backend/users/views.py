@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .serializers import UserRegisterSerializer
 from .serializers import UserLoginSerializer
 
@@ -51,3 +51,12 @@ class MeView(APIView):
                 "name": request.user.name,
             }
         )   
+
+
+class AdminOnlyView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        return success_response(
+            data={"message": "Você é admin e pode ver isso"}
+        )
