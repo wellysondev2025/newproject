@@ -6,6 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import UserRegisterSerializer
 from .serializers import UserLoginSerializer
 
+from utils.responses import success_response, error_response
+
+
 
 class UserRegisterView(APIView):
     permission_classes = []
@@ -14,11 +17,11 @@ class UserRegisterView(APIView):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(
-                {"message": "Usuário criado com sucesso"},
-                status=status.HTTP_201_CREATED
+            return success_response(
+                data={"message": "Usuário criado com sucesso"},
+                status=201
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return error_response(serializer.errors, status=400)
 
 class UserLoginView(APIView):
     permission_classes = []
@@ -27,15 +30,14 @@ class UserLoginView(APIView):
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data["user"]
-            return Response(
-                {
-                    "message": "Login realizado com sucesso",
+            return success_response(
+                data={
                     "email": user.email,
                     "name": user.name,
                     "is_staff": user.is_staff,
                 }
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return error_response(serializer.errors, status=400)
 
 
 
@@ -43,7 +45,9 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({
-            "email": request.user.email,
-            "name": request.user.name,
-        })
+        return success_response(
+            data={
+                "email": request.user.email,
+                "name": request.user.name,
+            }
+        )   
