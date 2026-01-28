@@ -1,14 +1,9 @@
 from rest_framework import serializers
 from .models import User, UserProfile
 from django.contrib.auth import authenticate
-from django.db import transaction
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.core.mail import send_mail
-from django.conf import settings
-from urllib.parse import quote
-
+from rest_framework import serializers
+from users.services.register_user import RegisterUserService
+import re
 
 class UserRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -19,44 +14,40 @@ class UserRegisterSerializer(serializers.Serializer):
     birth_date = serializers.DateField()
     address = serializers.CharField()
 
-    @transaction.atomic
+    # Validação do CPF
+    def validate_cpf(self, value):
+        if not value:
+            raise serializers.ValidationError("CPF é obrigatório.")
+
+        # Remove caracteres não numéricos
+        cpf_numbers = re.sub(r'\D', '', value)
+
+        if len(cpf_numbers) != 11:
+            raise serializers.ValidationError("CPF deve ter 11 números.")
+
+        if not self.cpf_valido(cpf_numbers):
+            raise serializers.ValidationError("CPF inválido.")
+
+        return cpf_numbers
+
+    # Função para checar dígitos verificadores do CPF
+    def cpf_valido(self, cpf):
+        if cpf in [c*11 for c in "0123456789"]:
+            return False  # CPFs com todos os números iguais são inválidos
+
+        def calc_dv(digs):
+            s = sum(int(d) * w for d, w in zip(digs, range(len(digs)+1, 1, -1)))
+            r = 11 - s % 11
+            return '0' if r >= 10 else str(r)
+
+        dv1 = calc_dv(cpf[:9])
+        dv2 = calc_dv(cpf[:9] + dv1)
+        return cpf[-2:] == dv1 + dv2
+
+    # create continua chamando o service
     def create(self, validated_data):
-        password = validated_data.pop("password")
+        return RegisterUserService.execute(validated_data)
 
-        profile_data = {
-            "full_name": validated_data.pop("full_name"),
-            "cpf": validated_data.pop("cpf"),
-            "birth_date": validated_data.pop("birth_date"),
-            "address": validated_data.pop("address"),
-        }
-
-        user = User.objects.create_user(
-            password=password,
-            is_active = False,
-            **validated_data
-        )
-
-        UserProfile.objects.create(
-            user=user,
-            **profile_data
-        )
-
-        # gera token e uid
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-
-        # cria link de ativação
-        activation_link = f"http://localhost:8000/api/v1/users/activate/{uid}/{quote(token)}/"
-
-        message = f"Ative sua conta clicando no link abaixo:\n\n{activation_link}"
-        send_mail(
-            subject="Ative sua conta",
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-        )
-
-        return user
 
 
 class UserLoginSerializer(serializers.Serializer):
