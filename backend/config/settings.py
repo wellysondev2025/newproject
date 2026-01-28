@@ -1,5 +1,9 @@
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
 
     'users',
     'rest_framework'
@@ -122,3 +127,13 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "sandbox.smtp.mailtrap.io"
+EMAIL_PORT = 2525
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = os.getenv("MAILTRAP_USER")
+EMAIL_HOST_PASSWORD = os.getenv("MAILTRAP_PASSWORD")
+
+DEFAULT_FROM_EMAIL = "Seu App <no-reply@seuapp.com>"

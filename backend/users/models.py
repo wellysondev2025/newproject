@@ -23,17 +23,38 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    name = models.CharField(max_length=100)
+    @property
+    def full_name(self):
+        return self.profile.full_name if hasattr(self, 'profile') else ''
 
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["name"]
+    USERNAME_FIELD = "email"    
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return self.email
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
+
+    full_name = models.CharField(max_length=255)
+    cpf = models.CharField(max_length=11, unique=True)
+    birth_date = models.DateField()
+
+    address = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.full_name
+
+
