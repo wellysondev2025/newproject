@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 from users.services.register_user import RegisterUserService
 import re
+from ..utils import validar_cpf
 
 class UserRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -14,37 +15,13 @@ class UserRegisterSerializer(serializers.Serializer):
     birth_date = serializers.DateField()
     address = serializers.CharField()
 
-    # Validação do CPF
+    # Validação do CPF chamando a função utilitária
     def validate_cpf(self, value):
-        if not value:
-            raise serializers.ValidationError("CPF é obrigatório.")
+        try:
+            return validar_cpf(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
 
-        # Remove caracteres não numéricos
-        cpf_numbers = re.sub(r'\D', '', value)
-
-        if len(cpf_numbers) != 11:
-            raise serializers.ValidationError("CPF deve ter 11 números.")
-
-        if not self.cpf_valido(cpf_numbers):
-            raise serializers.ValidationError("CPF inválido.")
-
-        return cpf_numbers
-
-    # Função para checar dígitos verificadores do CPF
-    def cpf_valido(self, cpf):
-        if cpf in [c*11 for c in "0123456789"]:
-            return False  # CPFs com todos os números iguais são inválidos
-
-        def calc_dv(digs):
-            s = sum(int(d) * w for d, w in zip(digs, range(len(digs)+1, 1, -1)))
-            r = 11 - s % 11
-            return '0' if r >= 10 else str(r)
-
-        dv1 = calc_dv(cpf[:9])
-        dv2 = calc_dv(cpf[:9] + dv1)
-        return cpf[-2:] == dv1 + dv2
-
-    # create continua chamando o service
     def create(self, validated_data):
         return RegisterUserService.execute(validated_data)
 
